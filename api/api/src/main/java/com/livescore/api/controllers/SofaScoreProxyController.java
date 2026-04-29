@@ -150,23 +150,24 @@ public class SofaScoreProxyController {
 
     // ✅ HÀM TẠO HEADER NGỤY TRANG "VŨ KHÍ HẠNG NẶNG" ĐỂ QUA MẶT CLOUDFLARE
     private HttpHeaders createHeaders() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("User-Agent", USER_AGENT);
-        headers.set("Origin", "https://www.sofascore.com");
-        headers.set("Referer", "https://www.sofascore.com/");
-        headers.set("Accept", "*/*");
-        headers.set("Accept-Language", "en-US,en;q=0.9,vi;q=0.8");
-        headers.set("Cache-Control", "no-cache");
-        
-        // --- BỘ VŨ KHÍ LỪA CLOUDFLARE ---
-        headers.set("sec-ch-ua", "\"Chromium\";v=\"124\", \"Google Chrome\";v=\"124\", \"Not-A.Brand\";v=\"99\"");
-        headers.set("sec-ch-ua-mobile", "?0");
-        headers.set("sec-ch-ua-platform", "\"Windows\"");
-        headers.set("Sec-Fetch-Dest", "empty");
-        headers.set("Sec-Fetch-Mode", "cors");
-        headers.set("Sec-Fetch-Site", "cross-site");
-        headers.set("Connection", "keep-alive");
-        
-        return headers;
+    HttpHeaders headers = new HttpHeaders();
+    headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
+    headers.set("Accept", "application/json, text/plain, */*");
+    headers.set("Accept-Language", "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7");
+    headers.set("Accept-Encoding", "gzip, deflate, br"); // Rất quan trọng để giả lập trình duyệt
+    headers.set("Referer", "https://www.sofascore.com/");
+    headers.set("Origin", "https://www.sofascore.com");
+    headers.set("Connection", "keep-alive");
+    headers.set("Sec-Fetch-Dest", "empty");
+    headers.set("Sec-Fetch-Mode", "cors");
+    headers.set("Sec-Fetch-Site", "same-site");
+    
+    // Thêm các thông số Client Hint của Chrome 124
+    headers.set("sec-ch-ua", "\"Chromium\";v=\"124\", \"Google Chrome\";v=\"124\", \"Not-A.Brand\";v=\"99\"");
+    headers.set("sec-ch-ua-mobile", "?0");
+    headers.set("sec-ch-ua-platform", "\"Windows\"");
+    
+    return headers;
     }
+
 }
