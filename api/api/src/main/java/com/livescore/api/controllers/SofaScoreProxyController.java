@@ -13,12 +13,13 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class SofaScoreProxyController {
 
     private final RestTemplate restTemplate = new RestTemplate();
-    private final ObjectMapper objectMapper = new ObjectMapper(); // ✅ Thêm bộ đọc JSON siêu tốc
+    private final ObjectMapper objectMapper = new ObjectMapper(); // Bộ đọc JSON siêu tốc
 
-    // --- HẰNG SỐ CẤU HÌNH ---
-    private static final String SOFASCORE_API = "https://api.sofascore.com/api/v1";
+    // --- HẰNG SỐ CẤU HÌNH (Đã nâng cấp chống Cloudflare) ---
+    // Đổi toàn bộ sang đuôi .app
+    private static final String SOFASCORE_API = "https://api.sofascore.app/api/v1";
     private static final String SOFASCORE_IMAGE_API = "https://api.sofascore.app/api/v1";
-    private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+    private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
     // ==========================================
     // 1. NHÓM DỮ LIỆU CẦU THỦ & ĐỘI BÓNG
@@ -73,28 +74,24 @@ public class SofaScoreProxyController {
     @GetMapping("/league/{id}/standings")
     public ResponseEntity<String> getStandings(@PathVariable Long id) {
         String seasonId = getCurrentSeasonId(id);
-        // ✅ ĐÃ SỬA LỖI: tournament -> unique-tournament
         return proxyGet(SOFASCORE_API + "/unique-tournament/" + id + "/season/" + seasonId + "/standings/total");
     }
 
-   // Sửa thành API gốc chuyên trả về đầy đủ Thống kê
     @GetMapping("/league/{id}/top-scorers")
-public ResponseEntity<String> getTopScorers(@PathVariable Long id) {
-    String seasonId = getCurrentSeasonId(id);
-    // ✅ Thêm &fields=goals,assists,player,team vào URL
-    String url = SOFASCORE_API + "/unique-tournament/" + id + "/season/" + seasonId 
-               + "/statistics?limit=20&order=-goals&accumulation=total&fields=goals,assists,player,team";
-    return proxyGet(url);
-}
+    public ResponseEntity<String> getTopScorers(@PathVariable Long id) {
+        String seasonId = getCurrentSeasonId(id);
+        String url = SOFASCORE_API + "/unique-tournament/" + id + "/season/" + seasonId 
+                   + "/statistics?limit=20&order=-goals&accumulation=total&fields=goals,assists,player,team";
+        return proxyGet(url);
+    }
 
-@GetMapping("/league/{id}/top-assists")
-public ResponseEntity<String> getTopAssists(@PathVariable Long id) {
-    String seasonId = getCurrentSeasonId(id);
-    // ✅ Tương tự
-    String url = SOFASCORE_API + "/unique-tournament/" + id + "/season/" + seasonId 
-               + "/statistics?limit=20&order=-assists&accumulation=total&fields=goals,assists,player,team";
-    return proxyGet(url);
-}
+    @GetMapping("/league/{id}/top-assists")
+    public ResponseEntity<String> getTopAssists(@PathVariable Long id) {
+        String seasonId = getCurrentSeasonId(id);
+        String url = SOFASCORE_API + "/unique-tournament/" + id + "/season/" + seasonId 
+                   + "/statistics?limit=20&order=-assists&accumulation=total&fields=goals,assists,player,team";
+        return proxyGet(url);
+    }
 
     // ==========================================
     // 4. TÌM KIẾM
@@ -111,23 +108,19 @@ public ResponseEntity<String> getTopAssists(@PathVariable Long id) {
     // CÁC HÀM XỬ LÝ LÕI & TỰ ĐỘNG HÓA
     // ==========================================
 
-    // ✅ HÀM "THÁM TỬ": TỰ ĐỘNG TÌM MÃ MÙA GIẢI MỚI NHẤT
     private String getCurrentSeasonId(Long tournamentId) {
         try {
             String url = SOFASCORE_API + "/unique-tournament/" + tournamentId + "/seasons";
             HttpEntity<String> entity = new HttpEntity<>(createHeaders());
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
             
-            // Đọc cục JSON trả về, bóc lấy mảng 'seasons', lấy cục đầu tiên (mới nhất), và móc cái 'id' ra
             JsonNode root = objectMapper.readTree(response.getBody());
             return root.path("seasons").get(0).path("id").asText();
         } catch (Exception e) {
-            // Cứu cánh: Nếu mạng lag không hỏi được, thì lấy tạm mùa 24/25 xài đỡ để app không bị sập
             return "76986"; 
         }
     }
 
-    // Hàm gọi API trả về chuỗi JSON
     private ResponseEntity<String> proxyGet(String url) {
         try {
             HttpEntity<String> entity = new HttpEntity<>(createHeaders());
@@ -142,7 +135,6 @@ public ResponseEntity<String> getTopAssists(@PathVariable Long id) {
         }
     }
 
-    // Hàm gọi API trả về Hình ảnh
     private ResponseEntity<byte[]> proxyGetImage(String url) {
         try {
             HttpEntity<String> entity = new HttpEntity<>(createHeaders());
@@ -156,14 +148,25 @@ public ResponseEntity<String> getTopAssists(@PathVariable Long id) {
         }
     }
 
-    // Hàm tạo Header ngụy trang
+    // ✅ HÀM TẠO HEADER NGỤY TRANG "VŨ KHÍ HẠNG NẶNG" ĐỂ QUA MẶT CLOUDFLARE
     private HttpHeaders createHeaders() {
         HttpHeaders headers = new HttpHeaders();
         headers.set("User-Agent", USER_AGENT);
         headers.set("Origin", "https://www.sofascore.com");
         headers.set("Referer", "https://www.sofascore.com/");
-        headers.set("Accept", "application/json, text/plain, */*");
-        headers.set("Accept-Language", "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7");
+        headers.set("Accept", "*/*");
+        headers.set("Accept-Language", "en-US,en;q=0.9,vi;q=0.8");
+        headers.set("Cache-Control", "no-cache");
+        
+        // --- BỘ VŨ KHÍ LỪA CLOUDFLARE ---
+        headers.set("sec-ch-ua", "\"Chromium\";v=\"124\", \"Google Chrome\";v=\"124\", \"Not-A.Brand\";v=\"99\"");
+        headers.set("sec-ch-ua-mobile", "?0");
+        headers.set("sec-ch-ua-platform", "\"Windows\"");
+        headers.set("Sec-Fetch-Dest", "empty");
+        headers.set("Sec-Fetch-Mode", "cors");
+        headers.set("Sec-Fetch-Site", "cross-site");
+        headers.set("Connection", "keep-alive");
+        
         return headers;
     }
 }
