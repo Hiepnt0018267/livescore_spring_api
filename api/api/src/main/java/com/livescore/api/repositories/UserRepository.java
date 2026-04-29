@@ -4,8 +4,10 @@ import com.livescore.api.models.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
-    // Chỉ cần để trống thế này, Spring Boot đã tự trang bị sẵn cho bạn 
-    // các hàm như: save(), findById(), delete()...
+    // Tự động tìm người dùng thông qua mã UID của Firebase
+    Optional<User> findByFirebaseUid(String firebaseUid);
 }
